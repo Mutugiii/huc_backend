@@ -6,6 +6,7 @@ class Config:
     '''
     SQLALCHEMY_DATABASE_URI = config('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    CLOUDINARY_URL = config('CLOUDINARY_URL')
 
 class ProdConfig(Config):
     '''
