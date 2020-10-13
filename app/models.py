@@ -39,7 +39,6 @@ class Profile(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, nullable=False)
-    avatar = CloudinaryField('image')
     country = db.Column(db.String(255), nullable=False)
     facebook = db.Column(db.String(255), nullable=True)
     twitter = db.Column(db.String(255), nullable=True)
@@ -81,7 +80,20 @@ class Profile(db.Model):
             Like.profile_id == self.id,
             Like.post_id == post.id
         ).count() > 0
-        
+    
+    def my_posts(self):
+        return Post.query.filter_by(profile_id == self.id).order_by(Post.timestamp.desc())
+
+    def timeline(self):
+        ''' My posts and others based on timestamps'''
+        followed = Post.query.join(
+            followers, (followers.c.followed_id == Post.profile_id).filter(
+                followers.c.follower_id == self.id
+            )
+        )
+        own = Post.query.filter_by(profile_id == self.id)
+        return followed.union(own).order_by(Post.timestamp.desc())
+
     def save_profile(self):
         db.session.add(self)
         db.session.commit()
@@ -143,6 +155,21 @@ class Post(db.Model):
     def delete_post(self):
         db.session.delete(self)
         db.session.commit()
+
+    def search_by_post_name(self, search_text):
+        return Post.query.filter_by(post_name == search_text).all()
+    
+    def search_by_post_type(self, search_text):
+        return Post.query.filter_by(post_type == search_text).all()
+
+    def search_by_post_category(self, search_text):
+        return Post.query.filter_by(post_category == search_text).all()
+
+    def search_by_post_location(self, search_text):
+        return Post.query.filter_by(post_location == search_text).all()
+
+    def search_by_post_licensing(self, search_text):
+        return Post.query.filter_by(post_licensing == search_text).all()
     
     def add_post_tag(self, tag):
         if not self.has_tag(tag):
