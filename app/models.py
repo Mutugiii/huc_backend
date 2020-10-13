@@ -1,7 +1,6 @@
 from . import db, ma
 from datetime import datetime
 import enum
-from cloudinary.models import CloudinaryField
 from marshmallow import fields as MarshmallowFields
 
 class MediaList(enum.Enum):
@@ -28,8 +27,8 @@ class LicensingList(enum.Enum):
 
 # Association Table for a Profile and its followers
 followers = db.Table('followers',
-    db.Column('follower_id', db.integer, db.ForeignKey('profiles.id')),
-    db.Column('followed_id', db.integer, db.ForeignKey('profiles.id'))
+    db.Column('follower_id', db.Integer, db.ForeignKey('profiles.id')),
+    db.Column('followed_id', db.Integer, db.ForeignKey('profiles.id'))
 )
 
 class Profile(db.Model):
@@ -50,7 +49,7 @@ class Profile(db.Model):
     join_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     posts = db.relationship('Post', backref='post_profile', lazy='dynamic')
     liker = db.relationship('Like', backref='liked_profile', lazy='dynamic')
-    followed = db.relationship('Profile', secondary=followers, primaryjoin=(followers.c.follower_id == id), secondaryjoin=(followers.c.followed_id == id), db.backref('followers', lazy='dynamic'), lazy='dynamic')
+    followed = db.relationship('Profile', secondary=followers, primaryjoin=(followers.c.follower_id == id), secondaryjoin=(followers.c.followed_id == id), backref=db.backref('followers', lazy='dynamic'), lazy='dynamic')
 
     def __init__(self, username, country, facebook, twitter, google, is_active, is_verified, remember_token):
         self.username = username
@@ -156,7 +155,7 @@ class Post(db.Model):
     __tablename__ = 'posts'
 
     id = db.Column(db.Integer, primary_key=True)
-    media = CloudinaryField('image')
+    media = db.Column(db.String(), default='https://res.cloudinary.com/mutugiii/image/upload/v1602581553/headshot-silhouette-19_eresev.jpg', nullable=False)
     post_name = db.Column(db.String(255), unique=True, nullable=False)
     post_type = db.Column(db.String(255), default=MediaList.photo, nullable=False)
     post_location = db.Column(db.String(255), nullable=False)
@@ -214,12 +213,12 @@ class Post(db.Model):
         )
 
  # Schema definition for the Post Model
- class PostSchema(ma.Schema):
-     class Meta:
-         fields = ('media', 'post_name', 'post_type', 'post_location', 'post_category', 'post_licensing', 'profile_id')
+class PostSchema(ma.Schema):
+    class Meta:
+        fields = ('media', 'post_name', 'post_type', 'post_location', 'post_category', 'post_licensing', 'profile_id')
 
-         id = MarshmallowFields.Integer(dump_only=True)
-         timestamp = MarshmallowFields.DateTime()
+        id = MarshmallowFields.Integer(dump_only=True)
+        timestamp = MarshmallowFields.DateTime()
 
 class PostTag(db.Model):
     '''
@@ -243,10 +242,9 @@ class PostTag(db.Model):
 
 # Schema definition for the PostTag Model
 class PostTagSchema(ma.Schema):
-    class Meta:
-        fields = ('tag_text')
+    id = MarshmallowFields.Integer(dump_only=True)
+    tag_text = MarshmallowFields.String(required=True)
 
-        id = MarshmallowFields.Integer(dump_only=True)
 
 class Comment(db.Model):
     '''
