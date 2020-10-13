@@ -2,6 +2,7 @@ from . import db, ma
 from datetime import datetime
 import enum
 from cloudinary.models import CloudinaryField
+from marshmallow import fields as MarshmallowFields
 
 class MediaList(enum.Enum):
     '''
@@ -50,6 +51,16 @@ class Profile(db.Model):
     posts = db.relationship('Post', backref='post_profile', lazy='dynamic')
     liker = db.relationship('Like', backref='liked_profile', lazy='dynamic')
     followed = db.relationship('Profile', secondary=followers, primaryjoin=(followers.c.follower_id == id), secondaryjoin=(followers.c.followed_id == id), db.backref('followers', lazy='dynamic'), lazy='dynamic')
+
+    def __init__(self, username, country, facebook, twitter, google, is_active, is_verified, remember_token):
+        self.username = username
+        self.country = country
+        self.facebook = facebook
+        self.twitter = twitter
+        self.google = google
+        self.is_active = is_active
+        self.is_verified = is_verified
+        self.remember_token = remember_token
 
     def follow(self, profile):
         if not self.is_following(profile):
@@ -123,6 +134,15 @@ class Profile(db.Model):
         db.session.commit()
 
 
+# Schema definition for the Profile Model
+class ProfileSchema(ma.Schema):
+    class Meta:
+        fields = ('username', 'country', 'facebook', 'twitter', 'google', 'is_active', 'is_verified', 'remember_token')
+
+        id = MarshmallowFields.Integer(dump_only=True)
+        join_date = MarshmallowFields.DateTime(dump_only=True)
+
+
 # Association Table for posts and tags
 tags = db.Table('tags', 
     db.Column('tag_id', db.Integer, db.ForeignKey('posttags.id'), primary_key=True),
@@ -147,6 +167,15 @@ class Post(db.Model):
     comments = db.relationship('Comment', backref='comment_post', lazy='dynamic')
     liked = db.relationship('Like', backref='liked_post', lazy='dynamic')
     tags = db.relationship('PostTag', secondary=tags, lazy='subquery', backref=db.backref('tagged_post', lazy=True))
+
+    def __init__(self, media, post_name, post_type, post_location, post_category, post_licensing, profile_id):
+        self.media = media
+        self.post_name = post_name
+        self.post_type = post_type
+        self.post_location = post_location
+        self.post_category = post_category
+        self.post_licensing = post_licensing
+        self.profile_id = profile_id
 
     def save_post(self):
         db.session.add(self)
@@ -183,7 +212,14 @@ class Post(db.Model):
         return PostTag.query.filter(
             PostTag.id == tag.id
         )
-        
+
+ # Schema definition for the Post Model
+ class PostSchema(ma.Schema):
+     class Meta:
+         fields = ('media', 'post_name', 'post_type', 'post_location', 'post_category', 'post_licensing', 'profile_id')
+
+         id = MarshmallowFields.Integer(dump_only=True)
+         timestamp = MarshmallowFields.DateTime()
 
 class PostTag(db.Model):
     '''
@@ -194,6 +230,9 @@ class PostTag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tag_text = db.Column(db.String(255), nullable=False)
 
+    def __init__(self, tag_text):
+        self.tag_text = tag_text
+
     def save_tag(self):
         db.session.add(self)
         db.session.commit()
@@ -201,6 +240,13 @@ class PostTag(db.Model):
     def delete_tag(self):
         db.session.delete(self)
         db.session.commit()
+
+# Schema definition for the PostTag Model
+class PostTagSchema(ma.Schema):
+    class Meta:
+        fields = ('tag_text')
+
+        id = MarshmallowFields.Integer(dump_only=True)
 
 class Comment(db.Model):
     '''
@@ -213,6 +259,10 @@ class Comment(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) 
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
 
+    def __init__(self, comment, post_id):
+        self.comment = comment
+        self.post_id = post_id
+
     def save_comment(self):
         db.session.add(self)
         db.session.commit()
@@ -220,6 +270,15 @@ class Comment(db.Model):
     def delete_comment(self):
         db.session.delete(self)
         db.session.commit()
+
+
+# Schema definition for the Comment Model
+class CommentSchema(ma.Schema):
+    class Meta:
+        fields = ('comment', 'post_id')
+
+        id = MarshmallowFields.Integer(dump_only=True)
+        timestamp = MarshmallowFields.DateTime()
 
 class Like(db.Model):
     '''
@@ -230,3 +289,7 @@ class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     profile_id = db.Column(db.Integer, db.ForeignKey('profiles.id'))
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+
+    def __init__(self, profile_id, post_id):
+        self.profile_id = profile_id
+        self.post_id = post_id
