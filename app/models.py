@@ -112,6 +112,9 @@ class Profile(db.Model):
         db.session.delete(self)
         db.session.commit()
 
+    def search_profile_name(self, search_text):
+        return Profile.query.filter(Profile.query.contains(search_text)).all()
+
     def reactivate_profile(self):
         self.is_active = True
         db.session.add(self)
